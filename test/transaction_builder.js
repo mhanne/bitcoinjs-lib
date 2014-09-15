@@ -50,13 +50,14 @@ describe('TransactionBuilder', function() {
   var prevTx, prevTxHash
   var keyPair
   var txb
+  var value
 
   beforeEach(function() {
     txb = new TransactionBuilder()
 
     prevTx = new Transaction()
-    prevTx.addOutput('1BgGZ9tcN4rm9KBzDn7KprQz87SZ26SAMH', 0)
-    prevTx.addOutput('1cMh228HTCiwS8ZsaakH8A8wze1JR5ZsP', 1)
+    prevTx.addOutput(Address.fromBase58Check('1BgGZ9tcN4rm9KBzDn7KprQz87SZ26SAMH').toOutputScript(), 0)
+    prevTx.addOutput(Address.fromBase58Check('1cMh228HTCiwS8ZsaakH8A8wze1JR5ZsP').toOutputScript(), 1)
     prevTxHash = prevTx.getHash()
 
     keyPair = new ECPair(BigInteger.ONE)

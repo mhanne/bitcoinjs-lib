@@ -4,6 +4,7 @@
       "description": "Standard transaction (1:1)",
       "id": "a0ff943d3f644d8832b1fa74be4d0ad2577615dc28a7ef74ff8c271b603a082a",
       "hash": "2a083a601b278cff74efa728dc157657d20a4dbe74fab132884d643f3d94ffa0",
+      "id": "a0ff943d3f644d8832b1fa74be4d0ad2577615dc28a7ef74ff8c271b603a082a",
       "raw": {
         "version": 1,
         "ins": [
