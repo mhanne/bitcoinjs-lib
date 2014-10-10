@@ -23,11 +23,11 @@ function findNetworkByWIFVersion(version) {
 function ECPair(d, Q, options) {
   options = options || {}
 
-  if (options.compressed === undefined) options.compressed = true
-  if (options.network === undefined) options.network = networks.bitcoin
+  var compressed = options.compressed === undefined ? true : options.compressed
+  var network = options.network === undefined ? networks.bitcoin : options.network
 
-  typeForce('Boolean', options.compressed)
-  assert('pubKeyHash' in options.network, 'Unknown pubKeyHash constants for network')
+  typeForce('Boolean', compressed)
+  assert('pubKeyHash' in network, 'Unknown pubKeyHash constants for network')
 
   if (d) {
     assert(d.signum() > 0, 'Private key must be greater than 0')
@@ -35,16 +35,16 @@ function ECPair(d, Q, options) {
   }
 
   if (Q) {
-    typeForce(ecurve.Point, Q)
+    typeForce('Point', Q)
 
   } else {
     Q = ECPair.curve.G.multiply(d)
   }
 
-  this.compressed = options.compressed
+  this.compressed = compressed
   this.d = d
   this.Q = Q
-  this.network = options.network
+  this.network = network
 }
 
 // Public access to secp256k1 curve

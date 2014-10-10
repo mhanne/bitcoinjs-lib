@@ -1,7 +1,9 @@
 var assert = require('assert')
+var bufferutils = require('./bufferutils')
 var scripts = require('./scripts')
 
-var ECPubKey = require('./ecpubkey')
+var Address = require('./address')
+var ECPair = require('./ecpair')
 var ECSignature = require('./ecsignature')
 var Script = require('./script')
 var Transaction = require('./transaction')
@@ -38,9 +40,9 @@ function extractInput(txIn, tx, vout) {
     case 'pubkeyhash':
       parsed = ECSignature.parseScriptSignature(scriptSig.chunks[0])
       hashType = parsed.hashType
-      pubKeys = [ECPubKey.fromBuffer(scriptSig.chunks[1])]
+      pubKeys = scriptSig.chunks.slice(1)
       signatures = [parsed.signature]
-      prevOutScript = pubKeys[0].getAddress().toOutputScript()
+      prevOutScript = ECPair.fromPublicKeyBuffer(pubKeys[0]).getAddress().toOutputScript()
 
       break
 
@@ -50,7 +52,7 @@ function extractInput(txIn, tx, vout) {
       signatures = [parsed.signature]
 
       if (redeemScript) {
-        pubKeys = [ECPubKey.fromBuffer(redeemScript.chunks[0])]
+        pubKeys = redeemScript.chunks.slice(0, 1)
       }
 
       break
@@ -61,14 +63,14 @@ function extractInput(txIn, tx, vout) {
       signatures = parsed.map(function(p) { return p.signature })
 
       if (redeemScript) {
-        pubKeys = redeemScript.chunks.slice(1, -2).map(ECPubKey.fromBuffer)
+        pubKeys = redeemScript.chunks.slice(1, -2)
 
         // offset signatures such that they are in order
         var signatureHash = tx.hashForSignature(vout, redeemScript, hashType)
 
         var offset = 0
         pubKeys.some(function(pubKey) {
-          if (pubKey.verify(signatureHash, signatures[offset])) return true
+          if (ECPair.fromPublicKeyBuffer(pubKey).verify(signatureHash, signatures[offset])) return true
 
           offset++
           signatures = [,].concat(signatures)
@@ -155,11 +157,11 @@ TransactionBuilder.prototype.addInput = function(prevTx, index, sequence, prevOu
     // if we can, extract pubKey information
     switch (prevOutType) {
       case 'multisig':
-        input.pubKeys = prevOutScript.chunks.slice(1, -2).map(ECPubKey.fromBuffer)
+        input.pubKeys = prevOutScript.chunks.slice(1, -2)
         break
 
       case 'pubkey':
-        input.pubKeys = prevOutScript.chunks.slice(0, 1).map(ECPubKey.fromBuffer)
+        input.pubKeys = prevOutScript.chunks.slice(0, 1)
         break
     }
 
@@ -258,7 +260,7 @@ TransactionBuilder.prototype.__build = function(allowIncomplete) {
   return tx
 }
 
-TransactionBuilder.prototype.sign = function(index, privKey, redeemScript, hashType) {
+TransactionBuilder.prototype.sign = function(index, keyPair, redeemScript, hashType) {
   assert(index in this.inputs, 'No input at index: ' + index)
   hashType = hashType || Transaction.SIGHASH_ALL
 
@@ -269,6 +271,8 @@ TransactionBuilder.prototype.sign = function(index, privKey, redeemScript, hashT
                 input.pubKeys &&
                 input.scriptType &&
                 input.signatures
+
+  var kpPubKey = keyPair.getPublicKeyBuffer()
 
   // are we almost ready to sign?
   if (canSign) {
@@ -296,19 +300,19 @@ TransactionBuilder.prototype.sign = function(index, privKey, redeemScript, hashT
       var pubKeys = []
       switch (scriptType) {
         case 'multisig':
-          pubKeys = redeemScript.chunks.slice(1, -2).map(ECPubKey.fromBuffer)
+          pubKeys = redeemScript.chunks.slice(1, -2)
           break
 
         case 'pubkeyhash':
           var pkh1 = redeemScript.chunks[2]
-          var pkh2 = privKey.pub.getAddress().hash
+          var pkh2 = keyPair.getAddress().hash
 
           assert.deepEqual(pkh1, pkh2, 'privateKey cannot sign for this input')
-          pubKeys = [privKey.pub]
+          pubKeys = [kpPubKey]
           break
 
         case 'pubkey':
-          pubKeys = redeemScript.chunks.slice(0, 1).map(ECPubKey.fromBuffer)
+          pubKeys = redeemScript.chunks.slice(0, 1)
           break
       }
 
@@ -330,9 +334,9 @@ TransactionBuilder.prototype.sign = function(index, privKey, redeemScript, hashT
 
       // we know nothin' Jon Snow, assume pubKeyHash
       } else {
-        input.prevOutScript = privKey.pub.getAddress().toOutputScript()
+        input.prevOutScript = keyPair.getAddress().toOutputScript()
         input.prevOutType = 'pubkeyhash'
-        input.pubKeys = [privKey.pub]
+        input.pubKeys = [kpPubKey]
         input.scriptType = input.prevOutType
 
       }
@@ -344,16 +348,16 @@ TransactionBuilder.prototype.sign = function(index, privKey, redeemScript, hashT
 
   // enforce in order signing of public keys
   assert(input.pubKeys.some(function(pubKey, i) {
-    if (!privKey.pub.Q.equals(pubKey.Q)) return false
+    if (!bufferutils.equal(kpPubKey, pubKey)) return false
 
     assert(!input.signatures[i], 'Signature already exists')
     var signatureScript = input.redeemScript || input.prevOutScript
     var signatureHash = this.tx.hashForSignature(index, signatureScript, hashType)
-    var signature = privKey.sign(signatureHash)
+    var signature = keyPair.sign(signatureHash)
     input.signatures[i] = signature
 
     return true
-  }, this), 'privateKey cannot sign for this input')
+  }, this), 'key pair cannot sign for this input')
 }
 
 module.exports = TransactionBuilder
