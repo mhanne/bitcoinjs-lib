@@ -209,14 +209,8 @@ TransactionBuilder.prototype.addOutput = function(scriptPubKey, value) {
   return this.tx.addOutput(scriptPubKey, value)
 }
 
-TransactionBuilder.prototype.build = function() {
-  return this.__build(false)
-}
-
-TransactionBuilder.prototype.buildIncomplete = function() {
-  return this.__build(true)
-}
-
+TransactionBuilder.prototype.build = function() { return this.__build(false) }
+TransactionBuilder.prototype.buildIncomplete = function() { return this.__build(true) }
 TransactionBuilder.prototype.__build = function(allowIncomplete) {
   if (!allowIncomplete) {
     assert(this.tx.ins.length > 0, 'Transaction has no inputs')
@@ -245,12 +239,12 @@ TransactionBuilder.prototype.__build = function(allowIncomplete) {
       case 'multisig':
         assert(input.signatures, 'Transaction is missing signatures')
 
-        var signatures = input.signatures.map(function(signature) {
+        var msSignatures = input.signatures.map(function(signature) {
           return signature.toScriptSignature(input.hashType)
         }).filter(function(signature) { return !!signature })
 
         var redeemScript = allowIncomplete ? undefined : input.redeemScript
-        scriptSig = scripts.multisigInput(signatures, redeemScript)
+        scriptSig = scripts.multisigInput(msSignatures, redeemScript)
         break
 
       case 'pubkey':
