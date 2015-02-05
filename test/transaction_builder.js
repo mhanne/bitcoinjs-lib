@@ -50,14 +50,14 @@ describe('TransactionBuilder', function() {
   var prevTx, prevTxHash
   var keyPair
   var txb
-  var value
 
   beforeEach(function() {
     txb = new TransactionBuilder()
 
-    prevTx = new Transaction()
-    prevTx.addOutput(Address.fromBase58Check('1BgGZ9tcN4rm9KBzDn7KprQz87SZ26SAMH').toOutputScript(), 0)
-    prevTx.addOutput(Address.fromBase58Check('1cMh228HTCiwS8ZsaakH8A8wze1JR5ZsP').toOutputScript(), 1)
+    var prevTxB = new TransactionBuilder()
+    prevTxB.addOutput('1BgGZ9tcN4rm9KBzDn7KprQz87SZ26SAMH', 0)
+    prevTxB.addOutput('1cMh228HTCiwS8ZsaakH8A8wze1JR5ZsP', 1)
+    prevTx = prevTxB.buildIncomplete()
     prevTxHash = prevTx.getHash()
 
     keyPair = new ECPair(BigInteger.ONE)
@@ -78,14 +78,14 @@ describe('TransactionBuilder', function() {
     })
 
     it('accepts a txHash, index [, sequence number and scriptPubKey]', function() {
-      var vin = txb.addInput(prevTxHash, 1, 54, prevTx.outs[1].script)
+      var vin = txb.addInput(prevTxHash, 1, 54, privScript)
       assert.equal(vin, 0)
 
       var txIn = txb.tx.ins[0]
       assert.equal(txIn.hash, prevTxHash)
       assert.equal(txIn.index, 1)
       assert.equal(txIn.sequence, 54)
-      assert.equal(txb.inputs[0].prevOutScript, prevTx.outs[1].script)
+      assert.equal(txb.inputs[0].prevOutScript, privScript)
     })
 
     it('accepts a prevTx, index [and sequence number]', function() {
@@ -96,7 +96,7 @@ describe('TransactionBuilder', function() {
       assert.deepEqual(txIn.hash, prevTxHash)
       assert.equal(txIn.index, 1)
       assert.equal(txIn.sequence, 54)
-      assert.equal(txb.inputs[0].prevOutScript, prevTx.outs[1].script)
+      assert.equal(txb.inputs[0].prevOutScript, privScript)
     })
 
     it('returns the input index', function() {
