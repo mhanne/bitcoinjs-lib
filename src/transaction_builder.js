@@ -19,14 +19,13 @@ function extractInput(txIn, tx, vout) {
   var prevOutType = scripts.classifyInput(scriptSig)
   var scriptType
 
-  // Re-classify if P2SH
+  // Re-classify if scriptHash
   if (prevOutType === 'scripthash') {
     redeemScript = Script.fromBuffer(scriptSig.chunks.slice(-1)[0])
     prevOutScript = scripts.scriptHashOutput(redeemScript.getHash())
 
     scriptSig = Script.fromChunks(scriptSig.chunks.slice(0, -1))
     scriptType = scripts.classifyInput(scriptSig)
-    assert.equal(scripts.classifyOutput(redeemScript), scriptType, 'Non-matching scriptSig and scriptPubKey in input')
 
   } else {
     scriptType = prevOutType
