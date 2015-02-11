@@ -1,4 +1,5 @@
 var assert = require('assert')
+var ops = require('./opcodes')
 var scripts = require('./scripts')
 
 var ECPubKey = require('./ecpubkey')
@@ -16,7 +17,7 @@ function extractInput(txIn, tx, vout) {
   var redeemScript
   var scriptSig = txIn.script
   var prevOutScript
-  var prevOutType = scripts.classifyInput(scriptSig)
+  var prevOutType = scripts.classifyInput(scriptSig, true)
   var scriptType
 
   // Re-classify if scriptHash
@@ -25,7 +26,7 @@ function extractInput(txIn, tx, vout) {
     prevOutScript = scripts.scriptHashOutput(redeemScript.getHash())
 
     scriptSig = Script.fromChunks(scriptSig.chunks.slice(0, -1))
-    scriptType = scripts.classifyInput(scriptSig)
+    scriptType = scripts.classifyInput(scriptSig, true)
 
   } else {
     scriptType = prevOutType
@@ -56,7 +57,8 @@ function extractInput(txIn, tx, vout) {
       break
 
     case 'multisig':
-      parsed = scriptSig.chunks.slice(1).map(ECSignature.parseScriptSignature)
+      // Strip out initial OP_0 and any missing signatures (filter ignores sparse arrays)
+      parsed = scriptSig.chunks.slice(1).filter(function(chunk) { return chunk !== ops.OP_0 }).map(ECSignature.parseScriptSignature)
       hashType = parsed[0].hashType
       signatures = parsed.map(function(p) { return p.signature })
 
